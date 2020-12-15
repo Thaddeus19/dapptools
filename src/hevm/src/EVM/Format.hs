@@ -3,7 +3,6 @@
 module EVM.Format where
 
 import Prelude hiding (Word)
-import Numeric
 import qualified EVM
 import EVM.Dapp (DappInfo (..), dappSolcByHash, dappAbiMap, showTraceLocation, dappEventMap)
 import EVM.Concrete ( wordValue )
@@ -79,30 +78,8 @@ humanizeInteger =
   . Text.pack
   . show
 
-showAbiValue :: AbiValue -> Text
-showAbiValue (AbiUInt _ w) =
-  pack $ show w
-showAbiValue (AbiInt _ w) =
-  pack $ show w
-showAbiValue (AbiBool b) =
-  pack $ show b
-showAbiValue (AbiAddress w160) =
-  pack $ "0x" ++ (showHex w160 "")
-showAbiValue (AbiBytes _ bs) =
-  formatBytes bs  -- opportunistically decodes recognisable strings
-showAbiValue (AbiBytesDynamic bs) =
-  formatBinary bs
-showAbiValue (AbiString bs) =
-  formatString bs
-showAbiValue (AbiArray _ _ xs) =
-  showAbiArray xs
-showAbiValue (AbiArrayDynamic _ xs) =
-  showAbiArray xs
-showAbiValue (AbiTuple v) =
-  showAbiValues v
-
 textAbiValues :: Vector AbiValue -> [Text]
-textAbiValues vs = toList (fmap showAbiValue vs)
+textAbiValues = toList . fmap (pack . show)
 
 textValues :: [AbiType] -> Buffer -> [Text]
 textValues ts (SymbolicBuffer  _) = [pack $ show t | t <- ts]
@@ -120,7 +97,7 @@ showAbiValues vs = parenthesise (textAbiValues vs)
 
 showAbiArray :: Vector AbiValue -> Text
 showAbiArray vs =
-  "[" <> intercalate ", " (toList (fmap showAbiValue vs)) <> "]"
+  "[" <> intercalate ", " (textAbiValues vs) <> "]"
 
 showValues :: [AbiType] -> Buffer -> Text
 showValues ts b = parenthesise $ textValues ts b

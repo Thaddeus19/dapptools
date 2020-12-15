@@ -600,13 +600,10 @@ symFailure UnitTestOptions {..} testName failures' = mconcat
 prettyCalldata :: (Buffer, SWord 256) -> Text -> [AbiType]-> SBV.Query Text
 prettyCalldata (buffer, cdlen) sig types = do
   cdlen' <- num <$> SBV.getValue cdlen
-  calldatainput <- case buffer of
+  cd <- case buffer of
     SymbolicBuffer cd -> mapM (SBV.getValue . fromSized) (take cdlen' cd) <&> BS.pack
     ConcreteBuffer cd -> return $ BS.take cdlen' cd
-  pure $ (head (Text.splitOn "(" sig)) <>
-           (Text.pack $ show (decodeAbiValue
-                  (AbiTupleType (Vector.fromList types))
-                  (BSLazy.fromStrict (BS.drop 4 calldatainput))))
+  pure $ (head (Text.splitOn "(" sig)) <> showCall types (ConcreteBuffer cd)
 
 execSymTest :: UnitTestOptions -> ABIMethod -> (Buffer, SWord 256) -> Stepper (Bool, VM)
 execSymTest opts@UnitTestOptions{ .. } method cd = do
@@ -726,9 +723,9 @@ formatTestLog events (Log _ args (topic:_)) =
               (ConcreteBuffer b) ->
                 case toList $ runGet (getAbiSeq (length ts) ts) (BSLazy.fromStrict b) of
                   [key, (AbiUInt 256 val), (AbiUInt 256 dec)] ->
-                    Just $ (unquote (showAbiValue key)) <> ": " <> showDecimal dec val
+                    Just $ (unquote (pack $ show key)) <> ": " <> showDecimal dec val
                   [key, (AbiInt 256 val), (AbiUInt 256 dec)] ->
-                    Just $ (unquote (showAbiValue key)) <> ": " <> showDecimal dec val
+                    Just $ (unquote (pack $ show key)) <> ": " <> showDecimal dec val
                   _ -> Nothing
               (SymbolicBuffer _) -> Just "<symbolic decimal>"
 
